@@ -1,3 +1,5 @@
+// ALL USERS SCHEMA
+
 model User {
     id                 String     @id @default(uuid())
     email              String     @unique
