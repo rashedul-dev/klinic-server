@@ -3,6 +3,8 @@ import { prisma } from "../../shared/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { email } from "zod";
+import { jwtHelper } from "../../helper/jwtHelper";
+import { Z_NEED_DICT } from "zlib";
 
 const login = async (payload: { email: string; password: string }) => {
   const user = await prisma.user.findUniqueOrThrow({
@@ -16,17 +18,12 @@ const login = async (payload: { email: string; password: string }) => {
   if (!isCorrectPassword) {
     throw new Error("Invalid creadential");
   }
-  const accessToken = jwt.sign({ email: user.email, role: user.role }, "abcd", {
-    algorithm: "HS256",
-    expiresIn: "1h",
-  });
-  const refreshToken = jwt.sign({ email: user.email, role: user.role }, "abcd", {
-    algorithm: "HS256",
-    expiresIn: "7d",
-  });
+  const accessToken = jwtHelper.generateToken({ email: user.email, role: user.role }, "abcd", "1h");
+  const refreshToken = jwtHelper.generateToken({ email: user.email, role: user.role }, "abcd", "7d");
   return {
     accessToken,
     refreshToken,
+    needPasswordChange: user.needPasswordChange,
   };
 };
 
