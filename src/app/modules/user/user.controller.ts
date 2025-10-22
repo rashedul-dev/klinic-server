@@ -13,6 +13,11 @@ const createPatient = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const getAllFormDB = catchAsync(async (req: Request, res: Response) => {
+  // const result = await UserService.getAllFormDB(filter, options);
+});
 export const UserController = {
   createPatient,
+  getAllFormDB,
 };

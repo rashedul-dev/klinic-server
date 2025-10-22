@@ -26,6 +26,11 @@ const createPatient = async (req: Request) => {
   return result;
 };
 
+const getAllFormDB = async (req: Request) => {
+  // const { page, limit, skip, sortBy, sortOrder }=
+};
+
 export const UserService = {
   createPatient,
+  getAllFormDB,
 };
