@@ -1,3 +1,4 @@
+import { Gender } from "@prisma/client";
 import z from "zod";
 
 const createPatientValidationSchema = z.object({
@@ -28,7 +29,7 @@ const createDoctorValidationSchema = z.object({
       .nonnegative("Experience cannot be negative")
       .optional()
       .default(0),
-    gender: z.enum(["MALE", "FEMALE", "OTHER"], { error: "Gender is required" }),
+    gender: z.enum([Gender.MALE, Gender.FEMALE], { error: "Gender is required" }),
     appointmentFee: z
       .number({ error: "Appointment fee is required" })
       .int("Appointment fee must be an integer")
@@ -70,7 +71,7 @@ const updateDoctorValidationSchema = z.object({
     address: z.string().min(1, "Address cannot be empty").optional(),
     registrationNumber: z.string().min(1, "Registration number cannot be empty").optional(),
     experience: z.number().int("Experience must be an integer").nonnegative("Experience cannot be negative").optional(),
-    gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+    gender: z.enum(["MALE", "FEMALE"]).optional(),
     appointmentFee: z
       .number()
       .int("Appointment fee must be an integer")
