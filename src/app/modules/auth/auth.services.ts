@@ -1,10 +1,8 @@
+// auth.services.ts
 import { UserStatus } from "@prisma/client";
 import { prisma } from "../../shared/prisma";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { email } from "zod";
 import { jwtHelper } from "../../helper/jwtHelper";
-import { Z_NEED_DICT } from "zlib";
 
 const login = async (payload: { email: string; password: string }) => {
   const user = await prisma.user.findUniqueOrThrow({
@@ -16,10 +14,29 @@ const login = async (payload: { email: string; password: string }) => {
 
   const isCorrectPassword = await bcrypt.compare(payload.password, user.password);
   if (!isCorrectPassword) {
-    throw new Error("Invalid creadential");
+    throw new Error("Invalid credential");
   }
-  const accessToken = jwtHelper.generateToken({ email: user.email, role: user.role }, "abcd", "1h");
-  const refreshToken = jwtHelper.generateToken({ email: user.email, role: user.role }, "abcd", "7d");
+
+  const accessToken = jwtHelper.generateToken(
+    {
+      email: user.email,
+      role: user.role,
+      userId: user.id,
+    },
+    process.env.JWT_SECRET!,
+    process.env.JWT_EXPIRES_IN!
+  );
+
+  const refreshToken = jwtHelper.generateToken(
+    {
+      email: user.email,
+      role: user.role,
+      userId: user.id,
+    },
+    process.env.JWT_REFRESH_SECRET!,
+    process.env.JWT_REFRESH_EXPIRES_IN!
+  );
+
   return {
     accessToken,
     refreshToken,
