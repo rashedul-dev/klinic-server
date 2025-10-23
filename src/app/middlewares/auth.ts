@@ -9,7 +9,7 @@ const auth = (...roles: string[]) => {
       if (!token) {
         throw new Error("You are not Authorized");
       }
-      const verifyUser = jwtHelper.verifyToken(token, "abcd");
+      const verifyUser = jwtHelper.verifyToken(token, process.env.JWT_SECRET!);
       req.user = verifyUser;
 
       if (roles.length && !roles.includes(verifyUser.role)) {
