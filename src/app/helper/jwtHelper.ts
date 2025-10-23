@@ -3,7 +3,7 @@ import jwt, { JwtPayload, Secret, SignOptions, TokenExpiredError } from "jsonweb
 const generateToken = (payload: any, secret: Secret, expiresIn: string) => {
   const token = jwt.sign(payload, secret, {
     algorithm: "HS256",
-    expiresIn: "1h",
+    expiresIn: expiresIn,
   } as SignOptions);
   return token;
 };
