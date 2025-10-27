@@ -113,7 +113,12 @@ const scheduleForDoctor = async (user: IJWTPaylaod, filters: any, options: IOpti
   });
 
   const total = await prisma.schedule.count({
-    where: whereConditions,
+    where: {
+      ...whereConditions,
+      id: {
+        notIn: doctorScheduleIds,
+      },
+    },
   });
 
   return {
