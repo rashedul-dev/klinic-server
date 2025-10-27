@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 
-export type JWTPaylaod = {
+export type IJWTPaylaod = {
   email: string;
   role: UserRole;
 };
