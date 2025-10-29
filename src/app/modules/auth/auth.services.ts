@@ -3,6 +3,8 @@ import { UserStatus } from "@prisma/client";
 import { prisma } from "../../shared/prisma";
 import bcrypt from "bcryptjs";
 import { jwtHelper } from "../../helper/jwtHelper";
+import ApiError from "../../errors/ApiError";
+import httpStatus from "http-status";
 
 const login = async (payload: { email: string; password: string }) => {
   const user = await prisma.user.findUniqueOrThrow({
@@ -14,7 +16,7 @@ const login = async (payload: { email: string; password: string }) => {
 
   const isCorrectPassword = await bcrypt.compare(payload.password, user.password);
   if (!isCorrectPassword) {
-    throw new Error("Invalid credential");
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid credential");
   }
 
   const accessToken = jwtHelper.generateToken(
