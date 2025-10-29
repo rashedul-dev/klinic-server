@@ -14,7 +14,7 @@ const getAllDoctor = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Doctor retrived successfully!",
+    message: "Doctors retrived successfully!",
     meta: result.meta,
     data: result.data,
   });
@@ -31,8 +31,44 @@ const updateDoctor = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const getDoctorById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await DoctorService.getDoctorById(id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Doctor retrive successfully!",
+    data: result,
+  });
+});
+const deleteDoctor = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await DoctorService.deleteDoctor(id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Doctor deleted successfully!",
+    data: result,
+  });
+});
+const softDeleteDoctor = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await DoctorService.softDeleteDoctor(id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Doctor soft deleted successfully!",
+    data: result,
+  });
+});
 
 export const DoctorController = {
   getAllDoctor,
   updateDoctor,
+  getDoctorById,
+  deleteDoctor,
+  softDeleteDoctor,
 };
