@@ -64,6 +64,16 @@ const softDeleteDoctor = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const getDoctorSuggetion = catchAsync(async (req: Request, res: Response) => {
+  const result = await DoctorService.getDoctorSuggestion(req.body);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "AI Suggested Doctor Fetched successsfully",
+    data: result,
+  });
+});
 
 export const DoctorController = {
   getAllDoctor,
@@ -71,4 +81,5 @@ export const DoctorController = {
   getDoctorById,
   deleteDoctor,
   softDeleteDoctor,
+  getDoctorSuggetion,
 };
