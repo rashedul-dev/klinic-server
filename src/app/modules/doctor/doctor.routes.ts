@@ -9,6 +9,8 @@ router.get("/", DoctorController.getAllDoctor);
 
 router.get("/:id", DoctorController.getDoctorById);
 
+router.post("/suggestion", DoctorController.getDoctorSuggetion);
+
 router.patch("/:id", auth(UserRole.ADMIN, UserRole.DOCTOR), DoctorController.updateDoctor);
 
 router.delete("/:id", auth(UserRole.ADMIN), DoctorController.deleteDoctor);
