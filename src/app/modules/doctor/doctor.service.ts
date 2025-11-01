@@ -3,6 +3,10 @@ import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { doctorSearchableFields } from "./doctor.constant";
 import { prisma } from "../../shared/prisma";
 import { IDoctorUpdateInput } from "./doctor.interface";
+import ApiError from "../../errors/ApiError";
+import httpStatus from "http-status";
+import { openai } from "../../helper/open-router";
+import { extractJsonFromMessage } from "../../helper/extractJsonFromMessage";
 
 const getAllDoctor = async (filters: any, options: IOptions) => {
   const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
@@ -191,10 +195,101 @@ const softDeleteDoctor = async (id: string): Promise<Doctor> => {
   });
 };
 
+const getDoctorSuggestion = async (payload: { symptoms: string }) => {
+  console.log("Received payload:", payload);
+
+  // Better validation
+  if (!payload?.symptoms?.trim()) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Symptoms are required");
+  }
+
+  // Fetch only available doctors and limit fields
+  const doctors = await prisma.doctor.findMany({
+    where: {
+      isDeleted: false,
+    },
+    include: {
+      doctorSpecialties: {
+        include: {
+          specialities: true,
+        },
+      },
+    },
+  });
+
+  if (doctors.length === 0) {
+    throw new ApiError(httpStatus.NOT_FOUND, "No doctors available");
+  }
+
+  console.log(`Loaded ${doctors.length} doctors for analysis\n`);
+
+  // prompt with clearer instructions
+  const prompt = `
+You are a medical assistant AI. Analyze the patient's symptoms and recommend the top 3 most relevant doctors from the list.
+
+PATIENT SYMPTOMS: ${payload.symptoms}
+
+AVAILABLE DOCTORS (JSON):
+${JSON.stringify(doctors, null, 2)}
+
+INSTRUCTIONS:
+- Analyze the symptoms and match with doctor specialties
+- Select only doctors whose specialties are relevant to the symptoms
+- Return exactly 3 doctors (or less if not enough matches)
+- Return in JSON format with full doctor objects
+- Include a brief reason for each recommendation
+
+RESPONSE FORMAT:
+{
+  "suggestedDoctors": [
+    { 
+      "doctor": { ...full doctor data... },
+      "matchReason": "Brief explanation why this doctor is suitable"
+    }
+  ]
+}
+`;
+
+  console.log("Analyzing symptoms and finding matches...\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "z-ai/glm-4.5-air:free",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful AI medical assistant that provides accurate doctor suggestions based on symptoms and specialties.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
+
+    const aiResponse = completion.choices[0]?.message;
+
+    if (!aiResponse?.content) {
+      throw new Error("No response from AI service");
+    }
+
+    console.log("AI analysis completed");
+    console.log("Raw AI response:", aiResponse.content);
+
+    const result = await extractJsonFromMessage(aiResponse);
+    return result;
+  } catch (error) {
+    console.error("Error in AI processing:", error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to generate doctor suggestions");
+  }
+};
+
 export const DoctorService = {
   getAllDoctor,
   updateDoctor,
   getDoctorById,
   deleteDoctor,
   softDeleteDoctor,
+  getDoctorSuggestion,
 };
