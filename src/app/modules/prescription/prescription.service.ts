@@ -1,10 +1,11 @@
 import { AppointmentStatus, PaymentStatus, Prescription, UserRole } from "@prisma/client";
-import { IJWTPaylaod } from "../../types/common";
+import { IJWTPayload } from "../../types/common";
 import { prisma } from "../../shared/prisma";
 import ApiError from "../../errors/ApiError";
 import httpStatus from "http-status";
+import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 
-const createPrescription = async (user: IJWTPaylaod, payload: Partial<Prescription>) => {
+const createPrescription = async (user: IJWTPayload, payload: Partial<Prescription>) => {
   const appointmentData = await prisma.appointment.findUniqueOrThrow({
     where: {
       id: payload.appointmentId,
@@ -37,97 +38,117 @@ const createPrescription = async (user: IJWTPaylaod, payload: Partial<Prescripti
   return result;
 };
 
-// GET MY PRESCRIPTION AS A PATIENT
-const getMyPrescriptions = async (user: IJWTPaylaod) => {
+// GET MY PRESCRIPTIONS AS A PATIENT
+const getMyPrescriptions = async (user: IJWTPayload, options: IOptions) => {
   if (user.role !== UserRole.PATIENT) {
     throw new ApiError(httpStatus.FORBIDDEN, "Only patients can access their prescriptions");
   }
 
-  const patient = await prisma.patient.findUniqueOrThrow({
-    where: {
-      email: user.email,
-    },
-  });
+  const { limit, page, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
 
   const result = await prisma.prescription.findMany({
     where: {
-      patientId: patient.id,
+      patient: {
+        email: user.email,
+      },
+    },
+    skip,
+    take: limit,
+    orderBy: {
+      [sortBy]: sortOrder,
     },
     include: {
-      doctor: {
-        select: {
-          name: true,
-          doctorSpecialties: true,
-        },
-      },
-      appointment: {
-        select: {
-          schedule: {
-            select: {
-              startDateTime: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
+      doctor: true,
+      patient: true,
+      appointment: true,
     },
   });
 
-  return result;
+  const total = await prisma.prescription.count({
+    where: {
+      patient: {
+        email: user.email,
+      },
+    },
+  });
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+    },
+    data: result,
+  };
 };
 
-// GET ALL PRESCRIPTIONS (FOR ADMIN/DOCTOR)
-const getAllPrescriptions = async (user: IJWTPaylaod) => {
-  let whereCondition = {};
+// GET ALL PRESCRIPTIONS (FOR ADMIN/DOCTOR) WITH PAGINATION
+const getAllPrescriptions = async (user: IJWTPayload, options: IOptions, filters: any = {}) => {
+  const { limit, page, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
 
+  let whereCondition: any = {};
+
+  // Role-based filtering
   if (user.role === UserRole.DOCTOR) {
     const doctor = await prisma.doctor.findUniqueOrThrow({
       where: {
         email: user.email,
       },
     });
-    whereCondition = {
-      doctorId: doctor.id,
+    whereCondition.doctorId = doctor.id;
+  }
+
+  // Additional filters
+  if (filters.patientId) {
+    whereCondition.patientId = filters.patientId;
+  }
+
+  if (filters.doctorId) {
+    whereCondition.doctorId = filters.doctorId;
+  }
+
+  if (filters.appointmentId) {
+    whereCondition.appointmentId = filters.appointmentId;
+  }
+
+  if (filters.startDate && filters.endDate) {
+    whereCondition.createdAt = {
+      gte: new Date(filters.startDate),
+      lte: new Date(filters.endDate),
     };
   }
 
   const result = await prisma.prescription.findMany({
     where: whereCondition,
-    include: {
-      patient: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-      doctor: {
-        select: {
-          name: true,
-          doctorSpecialties: true,
-        },
-      },
-      appointment: {
-        select: {
-          schedule: {
-            select: {
-              startDateTime: true,
-            },
-          },
-        },
-      },
-    },
+    skip,
+    take: limit,
     orderBy: {
-      createdAt: "desc",
+      [sortBy]: sortOrder,
+    },
+    include: {
+      doctor: true,
+      patient: true,
+      appointment: true,
     },
   });
 
-  return result;
+  const total = await prisma.prescription.count({
+    where: whereCondition,
+  });
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: result,
+  };
 };
 
 // GET SINGLE PRESCRIPTION BY ID
-const getPrescriptionById = async (user: IJWTPaylaod, prescriptionId: string) => {
+const getPrescriptionById = async (user: IJWTPayload, prescriptionId: string) => {
   const prescription = await prisma.prescription.findUniqueOrThrow({
     where: {
       id: prescriptionId,
@@ -186,7 +207,7 @@ const getPrescriptionById = async (user: IJWTPaylaod, prescriptionId: string) =>
 };
 
 // UPDATE PRESCRIPTION
-const updatePrescription = async (user: IJWTPaylaod, prescriptionId: string, payload: Partial<Prescription>) => {
+const updatePrescription = async (user: IJWTPayload, prescriptionId: string, payload: Partial<Prescription>) => {
   const prescription = await prisma.prescription.findUniqueOrThrow({
     where: {
       id: prescriptionId,
@@ -236,7 +257,7 @@ const updatePrescription = async (user: IJWTPaylaod, prescriptionId: string, pay
 };
 
 // DELETE PRESCRIPTION
-const deletePrescription = async (user: IJWTPaylaod, prescriptionId: string) => {
+const deletePrescription = async (user: IJWTPayload, prescriptionId: string) => {
   const prescription = await prisma.prescription.findUniqueOrThrow({
     where: {
       id: prescriptionId,

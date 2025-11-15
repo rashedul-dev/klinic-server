@@ -9,6 +9,8 @@ const router = express.Router();
 
 router.get("/", auth(UserRole.ADMIN), UserController.getAllFormDB);
 
+router.get("/me", auth(UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT), UserController.getMyProfile);
+
 router.post(
   "/create-patient",
   fileUploader.upload.single("file"),
@@ -35,5 +37,9 @@ router.post(
     return UserController.createAdmin(req, res, next);
   }
 );
+
+router.patch("/:id/status", auth(UserRole.ADMIN), UserController.updateProfileStatus);
+
+router.patch("/my-profile", auth(UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT), UserController.updateMyProfile);
 
 export const UserRoutes = router;

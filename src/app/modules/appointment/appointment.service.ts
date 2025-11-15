@@ -2,12 +2,12 @@ import { AppointmentStatus, Prisma, UserRole } from "@prisma/client";
 import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { prisma } from "../../shared/prisma";
 import stripe from "../../shared/stripe";
-import { IJWTPaylaod } from "../../types/common";
+import { IJWTPayload } from "../../types/common";
 import { v4 as uuidv4 } from "uuid";
 import ApiError from "../../errors/ApiError";
 import httpStatus from "http-status";
 
-const createAppointment = async (user: IJWTPaylaod, payload: { doctorId: string; scheduleId: string }) => {
+const createAppointment = async (user: IJWTPayload, payload: { doctorId: string; scheduleId: string }) => {
   const patientData = await prisma.patient.findUniqueOrThrow({
     where: {
       email: user.email,
@@ -93,7 +93,7 @@ const createAppointment = async (user: IJWTPaylaod, payload: { doctorId: string;
   return result;
 };
 
-const getMyAppointment = async (user: IJWTPaylaod, filters: any, options: IOptions) => {
+const getMyAppointment = async (user: IJWTPayload, filters: any, options: IOptions) => {
   const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
   const { ...filtersData } = filters;
 
@@ -152,7 +152,7 @@ const getMyAppointment = async (user: IJWTPaylaod, filters: any, options: IOptio
   };
 };
 
-const updateAppointmentStatus = async (appointmentId: string, status: AppointmentStatus, user: IJWTPaylaod) => {
+const updateAppointmentStatus = async (appointmentId: string, status: AppointmentStatus, user: IJWTPayload) => {
   const appointmentData = await prisma.appointment.findUniqueOrThrow({
     where: {
       id: appointmentId,
@@ -177,8 +177,149 @@ const updateAppointmentStatus = async (appointmentId: string, status: Appointmen
   });
 };
 
+// GET ALL APPOINTMENTS (ADMIN ONLY)
+const getAllAppointments = async (user: IJWTPayload, options: IOptions, filters: any = {}) => {
+  // Verify admin access
+  if (user.role !== UserRole.ADMIN) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only administrators can access all appointments");
+  }
+
+  const { limit, page, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options);
+
+  const andConditions: any[] = [];
+
+  // Search functionality
+  if (filters.searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          patient: {
+            name: {
+              contains: filters.searchTerm,
+              mode: "insensitive" as Prisma.QueryMode,
+            },
+          },
+        },
+        {
+          patient: {
+            email: {
+              contains: filters.searchTerm,
+              mode: "insensitive" as Prisma.QueryMode,
+            },
+          },
+        },
+        {
+          doctor: {
+            name: {
+              contains: filters.searchTerm,
+              mode: "insensitive" as Prisma.QueryMode,
+            },
+          },
+        },
+        {
+          doctor: {
+            email: {
+              contains: filters.searchTerm,
+              mode: "insensitive" as Prisma.QueryMode,
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  // Filter by status
+  if (filters.status) {
+    andConditions.push({
+      status: filters.status,
+    });
+  }
+
+  // Filter by payment status
+  if (filters.paymentStatus) {
+    andConditions.push({
+      paymentStatus: filters.paymentStatus,
+    });
+  }
+
+  // Filter by patient ID
+  if (filters.patientId) {
+    andConditions.push({
+      patientId: filters.patientId,
+    });
+  }
+
+  // Filter by doctor ID
+  if (filters.doctorId) {
+    andConditions.push({
+      doctorId: filters.doctorId,
+    });
+  }
+
+  // Filter by date range
+  if (filters.startDate && filters.endDate) {
+    andConditions.push({
+      schedule: {
+        startDateTime: {
+          gte: new Date(filters.startDate),
+          lte: new Date(filters.endDate),
+        },
+      },
+    });
+  } else if (filters.startDate) {
+    andConditions.push({
+      schedule: {
+        startDateTime: {
+          gte: new Date(filters.startDate),
+        },
+      },
+    });
+  } else if (filters.endDate) {
+    andConditions.push({
+      schedule: {
+        startDateTime: {
+          lte: new Date(filters.endDate),
+        },
+      },
+    });
+  }
+
+  const whereConditions: Prisma.AppointmentWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const [result, total] = await Promise.all([
+    prisma.appointment.findMany({
+      where: whereConditions,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      include: {
+        patient: true,
+        doctor: true,
+        schedule: true,
+        prescription: true,
+      },
+    }),
+    prisma.appointment.count({
+      where: whereConditions,
+    }),
+  ]);
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: result,
+  };
+};
+
 export const AppointmentService = {
   createAppointment,
   getMyAppointment,
   updateAppointmentStatus,
+  getAllAppointments,
 };

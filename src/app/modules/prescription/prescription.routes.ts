@@ -5,17 +5,16 @@ import { PrescriptionController } from "./prescription.controller";
 
 const router = express.Router();
 
-router.post("/", auth(UserRole.DOCTOR), PrescriptionController.createPrescription);
+router.get("/", auth(UserRole.ADMIN, UserRole.DOCTOR), PrescriptionController.getAllPrescriptions);
 
 router.get("/my-prescriptions", auth(UserRole.PATIENT), PrescriptionController.getMyPrescriptions);
-
-router.get("/", auth(UserRole.ADMIN, UserRole.DOCTOR), PrescriptionController.getAllPrescriptions);
 
 router.get(
   "/:prescriptionId",
   auth(UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT),
   PrescriptionController.getPrescriptionById
 );
+router.post("/", auth(UserRole.DOCTOR), PrescriptionController.createPrescription);
 
 router.patch("/:prescriptionId", auth(UserRole.DOCTOR), PrescriptionController.updatePrescription);
 
