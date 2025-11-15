@@ -4,6 +4,11 @@ import { UserService } from "./user.service";
 import sendResponse from "../../shared/sendResponse";
 import { userFilterableFields, userPagination } from "./user.constant";
 import pick from "../../helper/pick";
+import { IJWTPayload } from "../../types/common";
+import httpStatus from "http-status";
+import { prisma } from "../../shared/prisma";
+import { UserRole } from "@prisma/client";
+import ApiError from "../../errors/ApiError";
 
 const createPatient = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.createPatient(req);
@@ -50,9 +55,53 @@ const getAllFormDB = catchAsync(async (req: Request, res: Response) => {
     data: result.data,
   });
 });
+
+const getMyProfile = catchAsync(async (req: Request & { user?: IJWTPayload }, res: Response) => {
+  const user = req.user;
+  const result = await UserService.getMyProfile(user as IJWTPayload);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Profile data retrived successfully!",
+    data: result,
+  });
+});
+const updateProfileStatus = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserService.updateProfileStatus(id, req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Users profile updated Successfully",
+    data: result,
+  });
+});
+
+
+
+// UPDATE MY PROFILE
+const updateMyProfile = catchAsync(async (req: Request & { user?: IJWTPayload }, res: Response) => {
+  const user = req.user;
+  const payload = req.body;
+
+  const result = await UserService.updateMyProfile(user!, payload);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Profile updated successfully",
+    data: result,
+  });
+});
+
 export const UserController = {
   createPatient,
   createDoctor,
   createAdmin,
   getAllFormDB,
+  getMyProfile,
+  updateProfileStatus,
+  updateMyProfile,
 };
