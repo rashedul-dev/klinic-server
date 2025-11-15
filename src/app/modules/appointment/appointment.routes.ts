@@ -5,8 +5,10 @@ import { AppointmentController } from "./appointment.controller";
 
 const router = express.Router();
 
-router.post("/", auth(UserRole.PATIENT, UserRole.ADMIN), AppointmentController.createAppointment);
 router.get("/my-appointments", auth(UserRole.PATIENT, UserRole.DOCTOR), AppointmentController.getMyAppointment);
+router.get("/", auth(UserRole.ADMIN), AppointmentController.getAllAppointments);
+
+router.post("/", auth(UserRole.PATIENT, UserRole.ADMIN), AppointmentController.createAppointment);
 router.patch("/status/:id", auth(UserRole.ADMIN, UserRole.DOCTOR), AppointmentController.updateAppointmentStatus);
 
 export const AppointmentRoutes = router;
