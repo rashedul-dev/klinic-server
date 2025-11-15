@@ -7,8 +7,7 @@ import config from "../../../config";
 
 const handleStripeWebhookEvent = catchAsync(async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"] as string;
-  // const webhookSecret =config.stripe_webHook_secret;
-  const webhookSecret = "whsec_9573e1a238462bdb506ccfab34dbb9a9cadb408a9e3eefa4759dece8a7590ea5";
+  const webhookSecret = config.stripe_webHook_secret;
 
   let event;
   try {
