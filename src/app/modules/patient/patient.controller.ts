@@ -5,6 +5,7 @@ import { patientFilterableFields, patientPagination } from "./patient.constant";
 import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import pick from "../../helper/pick";
+import { IJWTPayload } from "../../types/common";
 
 const getAllPatients = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, patientFilterableFields);
@@ -33,9 +34,9 @@ const getPatientById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const updatePatient = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await PatientService.updateIntoDB(id, req.body);
+const updatePatient = catchAsync(async (req: Request & { user?: IJWTPayload }, res: Response) => {
+  const user = req.user;
+  const result = await PatientService.updateIntoDB(user as IJWTPayload, req.body);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
