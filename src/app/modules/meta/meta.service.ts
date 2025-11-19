@@ -161,7 +161,7 @@ const getAdminMetaData = async () => {
 
 const getBarChartData = async () => {
   const appointmentCountPerMonth = await prisma.$queryRaw`
-  SELETE DATE_TRUNC('month','createdAt') AS month,
+  SELETE DATE_TRUNC('month',"createdAt") AS month,
   CAST(COUNT(*) AS INTEGER) AS count
   FROM "appointment"
   GROUP BY month
